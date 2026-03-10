@@ -3,8 +3,10 @@
 }
 
 .pdf-shell {
-  padding-top: 2rem;
-  padding-bottom: 3rem;
+  width: min(1600px, calc(100% - 64px));
+  max-width: min(1600px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 48px 0 64px;
 }
 
 .pdf-hero {
@@ -22,12 +24,19 @@
 
 .pdf-hero h1 {
   margin: 0 0 0.6rem;
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 0.95;
+  max-width: 100%;
 }
 
 .pdf-hero p {
   margin: 0;
   color: color-mix(in srgb, var(--color-text) 75%, white);
+}
+
+.pdf-hero > p:not(.pdf-eyebrow) {
+  max-width: 80ch;
+  line-height: 1.6;
 }
 
 .pdf-card {
