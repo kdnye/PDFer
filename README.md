@@ -18,6 +18,35 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+## Deploy to Google Cloud Run
+
+### 1) Build container image
+
+This repo includes a production Dockerfile (multi-stage) and `.dockerignore`.
+
+Build and push with Cloud Build:
+
+```bash
+gcloud builds submit \
+  --tag us-central1-docker.pkg.dev/PROJECT_ID/pdfer/pdfer:latest
+```
+
+### 2) Deploy image to Cloud Run
+
+```bash
+gcloud run deploy pdfer \
+  --image us-central1-docker.pkg.dev/PROJECT_ID/pdfer/pdfer:latest \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+### Operational notes
+
+- PDF processing (`pdf-lib`, `pdfjs-dist`) stays in the browser.
+- Cloud Run serves only the Next.js app/runtime assets.
+- This preserves the privacy model: source PDFs are not uploaded for processing.
+
 ## Split input examples
 
 - `1`
