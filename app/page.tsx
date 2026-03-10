@@ -34,6 +34,9 @@ export default function Home() {
   const [files, setFiles] = useState<PdfFileRecord[]>([]);
   const [pages, setPages] = useState<PageItem[]>([]);
   const [pageRanges, setPageRanges] = useState("");
+  const [mergeFileName, setMergeFileName] = useState("merged.pdf");
+  const [splitBaseName, setSplitBaseName] = useState("split");
+  const [splitFileNames, setSplitFileNames] = useState("");
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState<"idle" | "success" | "error">("idle");
   const [working, setWorking] = useState(false);
@@ -64,6 +67,11 @@ export default function Home() {
       return current.filter((page) => page.fileId === firstFileId);
     });
     updateStatus("");
+
+    if (nextMode === "split") {
+      setMergeFileName("merged.pdf");
+      setSplitFileNames("");
+    }
   }
 
   async function addFiles(incoming: FileList | null) {
@@ -83,6 +91,10 @@ export default function Home() {
     try {
       const selectedFiles = mode === "split" ? [pdfFiles[0]] : pdfFiles;
       const built = await Promise.all(selectedFiles.map(buildPdfState));
+
+      if (mode === "split" && built[0]) {
+        setSplitBaseName(stripPdfExtension(built[0].fileRecord.file.name));
+      }
 
       setFiles((current) => (mode === "split" ? [built[0].fileRecord] : [...current, ...built.map((entry) => entry.fileRecord)]));
 
@@ -119,6 +131,9 @@ export default function Home() {
     setFiles([]);
     setPages([]);
     setPageRanges("");
+    setMergeFileName("merged.pdf");
+    setSplitBaseName("split");
+    setSplitFileNames("");
     updateStatus("");
   }
 
@@ -133,10 +148,10 @@ export default function Home() {
 
     try {
       if (mode === "merge") {
-        await mergeReorderedPages(files, pages);
+        await mergeReorderedPages(files, pages, mergeFileName);
         updateStatus("Merged PDF is ready.", "success");
       } else {
-        await splitIntoMultiplePdfs(files[0].file, pageRanges);
+        await splitIntoMultiplePdfs(files[0].file, pageRanges, splitBaseName, splitFileNames);
         updateStatus("Split PDFs were downloaded.", "success");
       }
     } catch (error) {
@@ -256,9 +271,21 @@ export default function Home() {
               <label htmlFor="pageRanges">Pages or ranges</label>
               <input id="pageRanges" className="fsi-input" value={pageRanges} onChange={(event) => setPageRanges(event.target.value)} placeholder="Examples: 1, 3-5, 8, 10-12" />
               <p className="helperText">Each page or range becomes its own output PDF. Example: 1, 3-5, 8.</p>
+
+              <label htmlFor="splitBaseName">Base output name</label>
+              <input id="splitBaseName" className="fsi-input" value={splitBaseName} onChange={(event) => setSplitBaseName(event.target.value)} placeholder="split" />
+              <p className="helperText">Default names use this base name, followed by the range label.</p>
+
+              <label htmlFor="splitFileNames">Custom names (optional)</label>
+              <input id="splitFileNames" className="fsi-input" value={splitFileNames} onChange={(event) => setSplitFileNames(event.target.value)} placeholder="Comma separated, in range order" />
+              <p className="helperText">Set one filename per range in the same order as your ranges. Example: Intro, Section-A, Appendix.</p>
             </div>
           ) : (
-            <p className="helperText">Drag page cards to change the final merge order.</p>
+            <div className="splitControls">
+              <p className="helperText">Drag page cards to change the final merge order.</p>
+              <label htmlFor="mergeFileName">Merged file name</label>
+              <input id="mergeFileName" className="fsi-input" value={mergeFileName} onChange={(event) => setMergeFileName(event.target.value)} placeholder="merged.pdf" />
+            </div>
           )}
 
           <div className="pdf-toolbar">
@@ -317,7 +344,7 @@ async function buildPdfState(file: File) {
   };
 }
 
-async function mergeReorderedPages(files: PdfFileRecord[], orderedPages: PageItem[]) {
+async function mergeReorderedPages(files: PdfFileRecord[], orderedPages: PageItem[], requestedFileName: string) {
   const mergedPdf = await PDFDocument.create();
   const sourceMap = new Map<string, PDFDocument>();
 
@@ -337,16 +364,18 @@ async function mergeReorderedPages(files: PdfFileRecord[], orderedPages: PageIte
   }
 
   const output = await mergedPdf.save();
-  downloadPdf(output, "merged.pdf");
+  downloadPdf(output, ensurePdfExtension(requestedFileName.trim()) || "merged.pdf");
 }
 
-async function splitIntoMultiplePdfs(file: File, input: string) {
+async function splitIntoMultiplePdfs(file: File, input: string, baseNameInput: string, customNamesInput: string) {
   const bytes = await file.arrayBuffer();
   const sourcePdf = await PDFDocument.load(bytes);
   const ranges = parseSplitRanges(input, sourcePdf.getPageCount());
-  const baseName = file.name.replace(/\.pdf$/i, "");
+  const fallbackBaseName = stripPdfExtension(file.name) || "split";
+  const configuredBaseName = sanitizeFileName(baseNameInput.trim()) || fallbackBaseName;
+  const customNames = parseCustomFileNames(customNamesInput, ranges.length);
 
-  for (const range of ranges) {
+  for (const [index, range] of ranges.entries()) {
     const outputPdf = await PDFDocument.create();
     const indexes = [];
 
@@ -358,7 +387,10 @@ async function splitIntoMultiplePdfs(file: File, input: string) {
     copiedPages.forEach((page) => outputPdf.addPage(page));
 
     const output = await outputPdf.save();
-    downloadPdf(output, `${baseName}-${range.label}.pdf`);
+    const customFileName = customNames[index];
+    const defaultFileName = `${configuredBaseName}-${range.label}`;
+    const resolvedName = ensurePdfExtension(customFileName || defaultFileName);
+    downloadPdf(output, resolvedName);
   }
 }
 
@@ -425,6 +457,40 @@ function reorderPages(items: PageItem[], sourceId: string, targetId: string) {
   const [moved] = next.splice(sourceIndex, 1);
   next.splice(targetIndex, 0, moved);
   return next;
+}
+
+function stripPdfExtension(value: string) {
+  return value.replace(/\.pdf$/i, "");
+}
+
+function sanitizeFileName(value: string) {
+  return value.replace(/[\\/:*?"<>|]+/g, " ").trim();
+}
+
+function ensurePdfExtension(value: string) {
+  const sanitized = sanitizeFileName(value);
+  if (!sanitized) {
+    return "";
+  }
+
+  return /\.pdf$/i.test(sanitized) ? sanitized : `${sanitized}.pdf`;
+}
+
+function parseCustomFileNames(input: string, rangeCount: number) {
+  if (!input.trim()) {
+    return [];
+  }
+
+  const names = input
+    .split(",")
+    .map((item) => sanitizeFileName(item.trim()))
+    .filter((item) => item.length > 0);
+
+  if (names.length !== rangeCount) {
+    throw new Error(`Provide exactly ${rangeCount} custom filename${rangeCount === 1 ? "" : "s"}, or leave the field empty.`);
+  }
+
+  return names;
 }
 
 function downloadPdf(bytes: Uint8Array, filename: string) {
