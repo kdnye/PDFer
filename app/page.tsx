@@ -54,11 +54,7 @@ export default function Home() {
     setMode(nextMode);
     setFiles((current) => (nextMode === "split" ? current.slice(0, 1) : current));
     setPages((current) => {
-      if (nextMode !== "split") {
-        return current;
-      }
-
-      if (!current.length) {
+      if (nextMode !== "split" || !current.length) {
         return current;
       }
 
@@ -88,13 +84,7 @@ export default function Home() {
       const selectedFiles = mode === "split" ? [pdfFiles[0]] : pdfFiles;
       const built = await Promise.all(selectedFiles.map(buildPdfState));
 
-      setFiles((current) => {
-        if (mode === "split") {
-          return [built[0].fileRecord];
-        }
-
-        return [...current, ...built.map((entry) => entry.fileRecord)];
-      });
+      setFiles((current) => (mode === "split" ? [built[0].fileRecord] : [...current, ...built.map((entry) => entry.fileRecord)]));
 
       setPages((current) => {
         if (mode === "split") {
@@ -189,102 +179,97 @@ export default function Home() {
   }
 
   return (
-    <main className="page">
-      <section className="hero">
-        <p className="eyebrow">PDF manipulation tool</p>
-        <h1>Split or combine PDF pages in the browser.</h1>
-        <p className="heroCopy">
-          Merge at page level with drag reordering, or split into multiple output PDFs by page or range.
-        </p>
-      </section>
-
-      <section className="panel">
-        <div className="toolbar">
-          <button
-            type="button"
-            className={mode === "merge" ? "modeButton active" : "modeButton"}
-            onClick={() => handleModeChange("merge")}
-          >
-            Combine PDFs
-          </button>
-          <button
-            type="button"
-            className={mode === "split" ? "modeButton active" : "modeButton"}
-            onClick={() => handleModeChange("split")}
-          >
-            Split Pages
-          </button>
-        </div>
-
-        <div className="dropzone" onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
-          <input type="file" accept="application/pdf" multiple onChange={onFileChange} />
-          <div>
-            <strong>Drop PDF files here</strong>
-            <p>or click to browse</p>
+    <>
+      <header className="fsi-navbar">
+        <div className="fsi-container">
+          <a className="fsi-brand fsi-display" href="#">PDFer</a>
+          <div className="fsi-nav-actions">
+            <a className="fsi-help" href="#tool" aria-label="Jump to PDF tool">?</a>
+            <div className="fsi-account-menu" data-account-menu>
+              <button className="fsi-secondary-btn" type="button" data-account-menu-toggle aria-expanded="false" aria-haspopup="true">
+                Tool Menu
+              </button>
+              <ul className="fsi-account-menu-list" data-account-menu-list hidden>
+                <li><a href="#tool" data-account-menu-item>PDF Tool</a></li>
+                <li><a href="#" data-account-menu-item>Brand Guide</a></li>
+              </ul>
+            </div>
           </div>
         </div>
+      </header>
 
-        <div className="sectionHeader">
-          <h2>{mode === "merge" ? "Page order" : "Source PDF"}</h2>
-          <button type="button" className="ghostButton" onClick={clearAll}>
-            Clear
-          </button>
-        </div>
+      <main id="tool" className="fsi-container pdf-shell">
+        <section className="pdf-hero">
+          <p className="pdf-eyebrow">FSI PDF utility</p>
+          <h1 className="fsi-display">Split or combine PDF pages in the browser</h1>
+          <p>Merge at page level with drag reordering, or split into multiple output PDFs by page or range.</p>
+        </section>
 
-        {pages.length ? (
-          <ul className="pageGrid">
-            {pages.map((page) => (
-              <li
-                key={page.id}
-                className={mode === "merge" ? "pageCard isDraggable" : "pageCard"}
-                draggable={mode === "merge"}
-                onDragStart={() => onDragStart(page.id)}
-                onDragOver={onDragOver}
-                onDrop={() => onDropPage(page.id)}
-              >
-                <img src={page.thumbnailUrl} alt={`${page.fileName} page ${page.pageNumber}`} className="thumb" />
-                <div className="pageCardBody">
-                  <div className="fileName">{page.fileName}</div>
-                  <div className="fileMeta">Page {page.pageNumber}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <ul className="fileList">
-            <li className="fileItem">No pages loaded.</li>
-          </ul>
-        )}
-
-        {mode === "split" ? (
-          <div className="splitControls">
-            <label htmlFor="pageRanges">Pages or ranges</label>
-            <input
-              id="pageRanges"
-              value={pageRanges}
-              onChange={(event) => setPageRanges(event.target.value)}
-              placeholder="Examples: 1, 3-5, 8, 10-12"
-            />
-            <p className="helperText">
-              Each page or range becomes its own output PDF. Example: 1, 3-5, 8.
-            </p>
+        <section className="fsi-card pdf-card">
+          <div className="pdf-toolbar">
+            <button type="button" className={mode === "merge" ? "fsi-primary-btn" : "fsi-secondary-btn"} onClick={() => handleModeChange("merge")}>
+              Combine PDFs
+            </button>
+            <button type="button" className={mode === "split" ? "fsi-primary-btn" : "fsi-secondary-btn"} onClick={() => handleModeChange("split")}>
+              Split Pages
+            </button>
           </div>
-        ) : (
-          <p className="helperText">Drag page cards to change the final merge order.</p>
-        )}
 
-        <div className="actions">
-          <button type="button" className="primaryButton" onClick={handleRun} disabled={working}>
-            {working
-              ? "Working..."
-              : mode === "split"
-                ? "Download split PDFs"
-                : "Download merged PDF"}
-          </button>
-          <span className={`status ${statusType}`}>{status}</span>
-        </div>
-      </section>
-    </main>
+          <div className="pdf-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
+            <input type="file" accept="application/pdf" multiple onChange={onFileChange} />
+            <div>
+              <strong>Drop PDF files here</strong>
+              <p>or click to browse</p>
+            </div>
+          </div>
+
+          <div className="pdf-toolbar">
+            <h2>{mode === "merge" ? "Page order" : "Source PDF"}</h2>
+            <button type="button" className="fsi-secondary-btn" onClick={clearAll}>Clear</button>
+          </div>
+
+          {pages.length ? (
+            <ul className="pdf-page-grid">
+              {pages.map((page) => (
+                <li
+                  key={page.id}
+                  className={mode === "merge" ? "pdf-page-card is-draggable" : "pdf-page-card"}
+                  draggable={mode === "merge"}
+                  onDragStart={() => onDragStart(page.id)}
+                  onDragOver={onDragOver}
+                  onDrop={() => onDropPage(page.id)}
+                >
+                  <img src={page.thumbnailUrl} alt={`${page.fileName} page ${page.pageNumber}`} className="pdf-thumb" />
+                  <div>
+                    <div className="pdf-file-name">{page.fileName}</div>
+                    <div className="pdf-file-meta">Page {page.pageNumber}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul className="fileList"><li className="fileItem">No pages loaded.</li></ul>
+          )}
+
+          {mode === "split" ? (
+            <div className="splitControls">
+              <label htmlFor="pageRanges">Pages or ranges</label>
+              <input id="pageRanges" className="fsi-input" value={pageRanges} onChange={(event) => setPageRanges(event.target.value)} placeholder="Examples: 1, 3-5, 8, 10-12" />
+              <p className="helperText">Each page or range becomes its own output PDF. Example: 1, 3-5, 8.</p>
+            </div>
+          ) : (
+            <p className="helperText">Drag page cards to change the final merge order.</p>
+          )}
+
+          <div className="pdf-toolbar">
+            <button type="button" className="fsi-primary-btn" onClick={handleRun} disabled={working}>
+              {working ? "Working..." : mode === "split" ? "Download split PDFs" : "Download merged PDF"}
+            </button>
+            <span className={`status ${statusType}`}>{status}</span>
+          </div>
+        </section>
+      </main>
+    </>
   );
 }
 
@@ -443,7 +428,7 @@ function reorderPages(items: PageItem[], sourceId: string, targetId: string) {
 }
 
 function downloadPdf(bytes: Uint8Array, filename: string) {
-  const blob = new Blob([bytes], { type: "application/pdf" });
+  const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
