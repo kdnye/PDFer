@@ -31,6 +31,8 @@ type SplitRange = {
   end: number;
 };
 
+const ALLOWED_UPLOAD_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx"]);
+
 export default function Home() {
   const [mode, setMode] = useState<Mode>("merge");
   const [files, setFiles] = useState<PdfFileRecord[]>([]);
@@ -82,18 +84,19 @@ export default function Home() {
       return;
     }
 
-    const pdfFiles = Array.from(incoming).filter((file) => file.type === "application/pdf");
-    if (!pdfFiles.length) {
-      updateStatus("Only PDF files are supported.", "error");
+    const selectableFiles = Array.from(incoming).filter((file) => ALLOWED_UPLOAD_EXTENSIONS.has(getFileExtension(file.name)));
+    if (!selectableFiles.length) {
+      updateStatus("Only PDF, Word (.doc/.docx), and Excel (.xls/.xlsx) files are supported.", "error");
       return;
     }
 
     setWorking(true);
-    updateStatus("Reading PDFs...");
+    updateStatus("Preparing files...");
 
     try {
-      const selectedFiles = mode === "split" ? [pdfFiles[0]] : pdfFiles;
-      const built = await Promise.all(selectedFiles.map(buildPdfState));
+      const selectedFiles = mode === "split" ? [selectableFiles[0]] : selectableFiles;
+      const pdfFiles = await Promise.all(selectedFiles.map(convertToPdfIfNeeded));
+      const built = await Promise.all(pdfFiles.map(buildPdfState));
 
       if (mode === "split" && built[0]) {
         setSplitBaseName(stripPdfExtension(built[0].fileRecord.file.name));
@@ -121,9 +124,9 @@ export default function Home() {
         return [...current, ...built.flatMap((entry) => entry.pages)];
       });
 
-      updateStatus(`${built.length} PDF file${built.length === 1 ? "" : "s"} loaded.`, "success");
+      updateStatus(`${built.length} file${built.length === 1 ? "" : "s"} loaded as PDF.`, "success");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to load PDFs.";
+      const message = error instanceof Error ? error.message : "Failed to load files.";
       updateStatus(message, "error");
     } finally {
       setWorking(false);
@@ -153,7 +156,7 @@ export default function Home() {
 
   async function handleRun() {
     if (!files.length) {
-      updateStatus("Select at least one PDF first.", "error");
+      updateStatus("Select at least one file first.", "error");
       return;
     }
 
@@ -298,7 +301,7 @@ export default function Home() {
         <section className="pdf-hero">
           <p className="pdf-eyebrow">FSI PDF utility</p>
           <h1 className="fsi-display pdf-title">Split or combine PDF pages in the browser</h1>
-          <p>Merge at page level with drag reordering, or split into multiple output PDFs by page or range.</p>
+          <p>Upload PDFs directly, or upload Word/Excel files and auto-convert them to PDF first.</p>
         </section>
 
         <section className="fsi-card pdf-card">
@@ -312,9 +315,14 @@ export default function Home() {
           </div>
 
           <div className="pdf-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
-            <input type="file" accept="application/pdf" multiple onChange={onFileChange} />
+            <input
+              type="file"
+              accept="application/pdf,.pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              multiple
+              onChange={onFileChange}
+            />
             <div>
-              <strong>Drop PDF files here</strong>
+              <strong>Drop PDF, Word, or Excel files here</strong>
               <p>or click to browse</p>
             </div>
           </div>
@@ -378,14 +386,13 @@ export default function Home() {
             <div className="splitControls">
               <label htmlFor="pageRanges">Pages or ranges</label>
               <input id="pageRanges" className="fsi-input" value={pageRanges} onChange={(event) => setPageRanges(event.target.value)} placeholder="Examples: 1, 3-5, 8, 10-12" />
-              <p className="helperText">Each page or range becomes its own output PDF. Example: 1, 3-5, 8.</p>
+              <p className="helperText">Each page or range becomes a separate output PDF.</p>
 
               <label htmlFor="splitBaseName">Base output name</label>
               <input id="splitBaseName" className="fsi-input" value={splitBaseName} onChange={(event) => setSplitBaseName(event.target.value)} placeholder="split" />
-              <p className="helperText">Default names use this base name, followed by the range label.</p>
 
-              <label htmlFor="splitFileNames">Custom names (optional)</label>
-              <input id="splitFileNames" className="fsi-input" value={splitFileNames} onChange={(event) => setSplitFileNames(event.target.value)} placeholder="Comma separated, in range order" />
+              <label htmlFor="splitFileNames">Optional custom file names</label>
+              <input id="splitFileNames" className="fsi-input" value={splitFileNames} onChange={(event) => setSplitFileNames(event.target.value)} placeholder="Cover, Section-A, Appendix" />
               <p className="helperText">Set one filename per range in the same order as your ranges. Example: Intro, Section-A, Appendix.</p>
             </div>
           ) : (
@@ -408,7 +415,7 @@ export default function Home() {
           <h2>Documentation &amp; Usage</h2>
 
           <div className="fsi-flash fsi-flash-success" style={{ marginBottom: "1.5rem" }}>
-            <strong>Security Note:</strong> All PDF rendering, splitting, and merging occurs entirely within your local browser. No document data is ever uploaded to a remote server.
+            <strong>Security Note:</strong> PDF rendering, splitting, and merging occur in your browser. Word/Excel-to-PDF conversion happens on this app server only for conversion.
           </div>
 
           <div className="fsi-help-card fsi-help-card--origin">
@@ -434,6 +441,35 @@ export default function Home() {
       </main>
     </>
   );
+}
+
+async function convertToPdfIfNeeded(file: File): Promise<File> {
+  const extension = getFileExtension(file.name);
+  if (extension === "pdf") {
+    return file;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/convert-to-pdf", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Failed to convert ${file.name} to PDF.`);
+  }
+
+  const pdfBlob = await response.blob();
+  const convertedFileName = `${stripPdfExtension(file.name)}.pdf`;
+  return new File([pdfBlob], convertedFileName, { type: "application/pdf" });
+}
+
+function getFileExtension(fileName: string) {
+  const parts = fileName.split(".");
+  return (parts[parts.length - 1] || "").toLowerCase();
 }
 
 async function buildPdfState(file: File) {
