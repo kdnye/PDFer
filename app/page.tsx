@@ -41,6 +41,7 @@ export default function Home() {
   const [statusType, setStatusType] = useState<"idle" | "success" | "error">("idle");
   const [working, setWorking] = useState(false);
   const dragPageId = useRef<string | null>(null);
+  const dragFileId = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -193,6 +194,72 @@ export default function Home() {
     setPages((current) => reorderPages(current, sourcePageId, targetPageId));
   }
 
+  function onDragStartFile(fileId: string) {
+    if (mode !== "merge") {
+      return;
+    }
+
+    dragFileId.current = fileId;
+  }
+
+  function onDropFile(targetFileId: string) {
+    if (mode !== "merge") {
+      return;
+    }
+
+    const sourceFileId = dragFileId.current;
+    dragFileId.current = null;
+
+    if (!sourceFileId || sourceFileId === targetFileId) {
+      return;
+    }
+
+    setFiles((currentFiles) => {
+      const nextFiles = [...currentFiles];
+      const sourceIndex = nextFiles.findIndex((file) => file.id === sourceFileId);
+      const targetIndex = nextFiles.findIndex((file) => file.id === targetFileId);
+
+      if (sourceIndex === -1 || targetIndex === -1) {
+        return currentFiles;
+      }
+
+      const [moved] = nextFiles.splice(sourceIndex, 1);
+      nextFiles.splice(targetIndex, 0, moved);
+
+      setPages((currentPages) => {
+        const pagesByFile = new Map<string, PageItem[]>();
+
+        currentPages.forEach((page) => {
+          if (!pagesByFile.has(page.fileId)) {
+            pagesByFile.set(page.fileId, []);
+          }
+
+          pagesByFile.get(page.fileId)!.push(page);
+        });
+
+        return nextFiles.flatMap((file) => pagesByFile.get(file.id) || []);
+      });
+
+      return nextFiles;
+    });
+  }
+
+  function groupPagesByFile() {
+    setPages((currentPages) => {
+      const pagesByFile = new Map<string, PageItem[]>();
+
+      currentPages.forEach((page) => {
+        if (!pagesByFile.has(page.fileId)) {
+          pagesByFile.set(page.fileId, []);
+        }
+
+        pagesByFile.get(page.fileId)!.push(page);
+      });
+
+      return files.flatMap((file) => pagesByFile.get(file.id) || []);
+    });
+  }
+
   return (
     <>
       <header className="fsi-navbar">
@@ -240,8 +307,35 @@ export default function Home() {
 
           <div className="pdf-toolbar">
             <h2>{mode === "merge" ? "Page order" : "Source PDF"}</h2>
-            <button type="button" className="fsi-secondary-btn" onClick={clearAll}>Clear</button>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              {mode === "merge" && files.length > 1 && (
+                <button type="button" className="fsi-secondary-btn" onClick={groupPagesByFile}>Group by File</button>
+              )}
+              <button type="button" className="fsi-secondary-btn" onClick={clearAll}>Clear</button>
+            </div>
           </div>
+
+          {mode === "merge" && files.length > 1 && (
+            <div className="splitControls" style={{ marginBottom: "1.5rem" }}>
+              <p className="helperText">Drag files to reorder all associated pages at once.</p>
+              <ul className="fileList" style={{ display: "grid", gap: "0.5rem" }}>
+                {files.map((file) => (
+                  <li
+                    key={file.id}
+                    className="fileItem is-draggable"
+                    style={{ display: "flex", justifyContent: "space-between", background: "var(--color-surface)" }}
+                    draggable
+                    onDragStart={() => onDragStartFile(file.id)}
+                    onDragOver={onDragOver}
+                    onDrop={() => onDropFile(file.id)}
+                  >
+                    <span className="pdf-file-name">{file.file.name}</span>
+                    <span className="pdf-file-meta">{file.pageCount} pages</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {pages.length ? (
             <ul className="pdf-page-grid">
