@@ -266,7 +266,7 @@ export default function Home() {
         <div className="fsi-container">
           <a className="fsi-brand fsi-display" href="#">PDFer</a>
           <div className="fsi-nav-actions">
-            <a className="fsi-help" href="#tool" aria-label="Jump to PDF tool">?</a>
+            <a className="fsi-help" href="#help" aria-label="Jump to Help Section">?</a>
             <div className="fsi-account-menu" data-account-menu>
               <button className="fsi-secondary-btn" type="button" data-account-menu-toggle aria-expanded="false" aria-haspopup="true">
                 Tool Menu
@@ -387,6 +387,34 @@ export default function Home() {
               {working ? "Working..." : mode === "split" ? "Download split PDFs" : "Download merged PDF"}
             </button>
             <span className={`status ${statusType}`}>{status}</span>
+          </div>
+        </section>
+
+        <section id="help" className="fsi-card pdf-card" style={{ marginTop: "2rem" }}>
+          <h2>Documentation &amp; Usage</h2>
+
+          <div className="fsi-flash fsi-flash-success" style={{ marginBottom: "1.5rem" }}>
+            <strong>Security Note:</strong> All PDF rendering, splitting, and merging occurs entirely within your local browser. No document data is ever uploaded to a remote server.
+          </div>
+
+          <div className="fsi-help-card fsi-help-card--origin">
+            <h4>Combining PDFs</h4>
+            <p>Merge multiple PDF documents or specific pages into a single file.</p>
+            <ul style={{ paddingLeft: "1.5rem", marginTop: "0.5rem", display: "grid", gap: "0.4rem" }}>
+              <li><strong>File-Level Sorting:</strong> When multiple files are loaded, drag and drop the file names in the list to reorder all associated pages at once.</li>
+              <li><strong>Page-Level Sorting:</strong> Drag and drop individual page thumbnails to fine-tune the final document order.</li>
+              <li><strong>Group by File:</strong> Use this button to instantly snap scattered pages back into sequential order grouped by their source file, without losing your individual page arrangements.</li>
+            </ul>
+          </div>
+
+          <div className="fsi-help-card fsi-help-card--delivery">
+            <h4>Splitting PDFs</h4>
+            <p>Extract specific pages or page ranges from a single source PDF into separate files.</p>
+            <ul style={{ paddingLeft: "1.5rem", marginTop: "0.5rem", display: "grid", gap: "0.4rem" }}>
+              <li><strong>Syntax:</strong> Enter pages or ranges separated by commas (e.g., <code>1, 3-5, 8, 10-12</code>). Each comma-separated segment will be downloaded as an independent PDF.</li>
+              <li><strong>Base Output Name:</strong> Defines the prefix for the exported files. If set to "Invoice", a range of <code>3-5</code> will export as <code>Invoice-3-5.pdf</code>.</li>
+              <li><strong>Custom Names:</strong> Provide a comma-separated list of exact file names corresponding to your ranges (e.g., <code>Cover, Main-Report, Appendix</code>). The number of custom names must exactly match the number of segments in your range input.</li>
+            </ul>
           </div>
         </section>
       </main>
