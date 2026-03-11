@@ -15,7 +15,7 @@
 
 .pdf-eyebrow {
   margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  font-size: 1.275rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fsi-gold);
@@ -27,6 +27,10 @@
   font-size: clamp(2.5rem, 5vw, 4.5rem);
   line-height: 0.95;
   max-width: 100%;
+}
+
+.pdf-title {
+  font-size: clamp(1.25rem, 2.5vw, 2.25rem) !important;
 }
 
 .pdf-hero p {
@@ -57,7 +61,7 @@
   display: grid;
   place-items: center;
   text-align: center;
-  min-height: 11rem;
+  min-height: 13.2rem;
   border: 2px dashed color-mix(in srgb, var(--fsi-navy) 40%, transparent);
   border-radius: 1rem;
   background: color-mix(in srgb, var(--btn-secondary-bg) 45%, transparent);
@@ -136,4 +140,10 @@
 
 .status.error {
   color: #b91c1c;
+}
+
+
+.fsi-brand-logo {
+  width: auto;
+  height: 2.25rem;
 }

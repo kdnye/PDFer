@@ -3,6 +3,8 @@
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
+import Image from "next/image";
+import fsiLogo from "../fsi-logo.png";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
 
@@ -275,7 +277,9 @@ export default function Home() {
     <>
       <header className="fsi-navbar">
         <div className="fsi-container">
-          <a className="fsi-brand fsi-display" href="#">PDFer</a>
+          <a className="fsi-brand" href="#" aria-label="PDFer home">
+            <Image src={fsiLogo} alt="FSI logo" className="fsi-brand-logo" priority />
+          </a>
           <div className="fsi-nav-actions">
             <a className="fsi-help" href="#help" aria-label="Jump to Help Section">?</a>
             <div className="fsi-account-menu" data-account-menu>
@@ -294,7 +298,7 @@ export default function Home() {
       <main id="tool" className="fsi-container pdf-shell">
         <section className="pdf-hero">
           <p className="pdf-eyebrow">FSI PDF utility</p>
-          <h1 className="fsi-display">Split or combine PDF pages in the browser</h1>
+          <h1 className="fsi-display pdf-title">Split or combine PDF pages in the browser</h1>
           <p>Merge at page level with drag reordering, or split into multiple output PDFs by page or range.</p>
         </section>
 
