@@ -97,7 +97,18 @@ export default function Home() {
         setSplitBaseName(stripPdfExtension(built[0].fileRecord.file.name));
       }
 
-      setFiles((current) => (mode === "split" ? [built[0].fileRecord] : [...current, ...built.map((entry) => entry.fileRecord)]));
+      setFiles((current) => {
+        const nextFiles = mode === "split" ? [built[0].fileRecord] : [...current, ...built.map((entry) => entry.fileRecord)];
+
+        if (mode === "merge" && nextFiles.length > 0) {
+          const combinedNames = nextFiles.map((fileRecord) => sanitizeFileName(stripPdfExtension(fileRecord.file.name))).join(".");
+          const safePrefix = combinedNames.length > 150 ? `${combinedNames.substring(0, 150)}_etc` : combinedNames;
+
+          setTimeout(() => setMergeFileName(`${safePrefix}_merged.pdf`), 0);
+        }
+
+        return nextFiles;
+      });
 
       setPages((current) => {
         if (mode === "split") {
