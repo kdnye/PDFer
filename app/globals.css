@@ -61,7 +61,7 @@
   display: grid;
   place-items: center;
   text-align: center;
-  min-height: 13.2rem;
+  min-height: 15.84rem;
   border: 2px dashed color-mix(in srgb, var(--fsi-navy) 40%, transparent);
   border-radius: 1rem;
   background: color-mix(in srgb, var(--btn-secondary-bg) 45%, transparent);
