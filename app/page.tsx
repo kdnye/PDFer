@@ -288,7 +288,6 @@ export default function Home() {
               </button>
               <ul className="fsi-account-menu-list" data-account-menu-list hidden>
                 <li><a href="#tool" data-account-menu-item>PDF Tool</a></li>
-                <li><a href="#" data-account-menu-item>Brand Guide</a></li>
               </ul>
             </div>
           </div>
