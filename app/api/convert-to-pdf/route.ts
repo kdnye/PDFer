@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { NextRequest, NextResponse } from "next/server";
+import { SERVER_CONVERTIBLE_DESCRIPTION, SERVER_CONVERTIBLE_EXTENSION_SET } from "../../lib/supported-file-types";
 
 const execFileAsync = promisify(execFile);
-const convertibleExtensions = new Set(["doc", "docx", "xls", "xlsx"]);
 
 export async function POST(request: NextRequest) {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pdfer-convert-"));
@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     const extension = getFileExtension(uploadedFile.name);
-    if (!convertibleExtensions.has(extension)) {
-      return NextResponse.json({ error: "Only .doc, .docx, .xls, and .xlsx can be auto-converted." }, { status: 400 });
+    if (!SERVER_CONVERTIBLE_EXTENSION_SET.has(extension)) {
+      return NextResponse.json({ error: `Only ${SERVER_CONVERTIBLE_DESCRIPTION} are supported for auto-conversion.` }, { status: 400 });
     }
 
     const safeBaseName = sanitizeName(stripFileExtension(uploadedFile.name)) || "document";
