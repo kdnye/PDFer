@@ -5,6 +5,7 @@ import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
 import Image from "next/image";
 import fsiLogo from "../fsi-logo.png";
+import { CONVERTIBLE_UPLOAD_ACCEPT, SUPPORTED_UPLOAD_DESCRIPTION, SUPPORTED_UPLOAD_EXTENSION_SET } from "./lib/supported-file-types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
 
@@ -31,7 +32,6 @@ type SplitRange = {
   end: number;
 };
 
-const ALLOWED_UPLOAD_EXTENSIONS = new Set(["pdf", "doc", "docx", "xls", "xlsx"]);
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("merge");
@@ -84,9 +84,9 @@ export default function Home() {
       return;
     }
 
-    const selectableFiles = Array.from(incoming).filter((file) => ALLOWED_UPLOAD_EXTENSIONS.has(getFileExtension(file.name)));
+    const selectableFiles = Array.from(incoming).filter((file) => SUPPORTED_UPLOAD_EXTENSION_SET.has(getFileExtension(file.name)));
     if (!selectableFiles.length) {
-      updateStatus("Only PDF, Word (.doc/.docx), and Excel (.xls/.xlsx) files are supported.", "error");
+      updateStatus(`Only ${SUPPORTED_UPLOAD_DESCRIPTION} are supported.`, "error");
       return;
     }
 
@@ -301,7 +301,7 @@ export default function Home() {
         <section className="pdf-hero">
           <p className="pdf-eyebrow">FSI PDF utility</p>
           <h1 className="fsi-display pdf-title">Split or combine PDF pages in the browser</h1>
-          <p>Upload PDFs directly, or upload Word/Excel files and auto-convert them to PDF first.</p>
+          <p>Upload PDFs directly, or upload compatible office/image files and auto-convert them to PDF first.</p>
         </section>
 
         <section className="fsi-card pdf-card">
@@ -317,12 +317,12 @@ export default function Home() {
           <div className="pdf-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
             <input
               type="file"
-              accept="application/pdf,.pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept={CONVERTIBLE_UPLOAD_ACCEPT}
               multiple
               onChange={onFileChange}
             />
             <div>
-              <strong>Drop PDF, Word, or Excel files here</strong>
+              <strong>Drop supported PDF, office, or image files here</strong>
               <p>or click to browse</p>
             </div>
           </div>
@@ -415,7 +415,7 @@ export default function Home() {
           <h2>Documentation &amp; Usage</h2>
 
           <div className="fsi-flash fsi-flash-success" style={{ marginBottom: "1.5rem" }}>
-            <strong>Security Note:</strong> PDF rendering, splitting, and merging occur in your browser. Word/Excel-to-PDF conversion happens on this app server only for conversion.
+            <strong>Security Note:</strong> PDF rendering, splitting, and merging occur in your browser. Office/image-to-PDF conversion happens on this app server only for conversion.
           </div>
 
           <div className="fsi-help-card fsi-help-card--origin">

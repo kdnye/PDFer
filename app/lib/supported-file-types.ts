@@ -1,0 +1,76 @@
+export const SUPPORTED_UPLOAD_EXTENSIONS = [
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "odt",
+  "ods",
+  "odp",
+  "rtf",
+  "txt",
+  "csv",
+  "jpg",
+  "jpeg",
+  "png",
+  "bmp",
+  "gif",
+  "tif",
+  "tiff",
+  "webp",
+] as const;
+
+export const SUPPORTED_UPLOAD_EXTENSION_SET = new Set<string>(SUPPORTED_UPLOAD_EXTENSIONS);
+
+export const SERVER_CONVERTIBLE_EXTENSIONS = SUPPORTED_UPLOAD_EXTENSIONS.filter((ext) => ext !== "pdf");
+export const SERVER_CONVERTIBLE_EXTENSION_SET = new Set<string>(SERVER_CONVERTIBLE_EXTENSIONS);
+
+export const CONVERTIBLE_UPLOAD_ACCEPT = [
+  "application/pdf",
+  ".pdf",
+  ".doc",
+  ".docx",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls",
+  ".xlsx",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".ppt",
+  ".pptx",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".odt",
+  ".ods",
+  ".odp",
+  "application/vnd.oasis.opendocument.text",
+  "application/vnd.oasis.opendocument.spreadsheet",
+  "application/vnd.oasis.opendocument.presentation",
+  ".rtf",
+  "application/rtf",
+  "text/rtf",
+  ".txt",
+  "text/plain",
+  ".csv",
+  "text/csv",
+  ".jpg",
+  ".jpeg",
+  "image/jpeg",
+  ".png",
+  "image/png",
+  ".bmp",
+  "image/bmp",
+  ".gif",
+  "image/gif",
+  ".tif",
+  ".tiff",
+  "image/tiff",
+  ".webp",
+  "image/webp",
+].join(",");
+
+export const SERVER_CONVERTIBLE_DESCRIPTION = "Word, Excel, PowerPoint, OpenDocument, text, CSV, and common image files (JPG/JPEG/PNG/BMP/GIF/TIFF/WEBP)";
+
+export const SUPPORTED_UPLOAD_DESCRIPTION = "PDF, Word, Excel, PowerPoint, OpenDocument, text, CSV, and common image files (JPG/JPEG/PNG/BMP/GIF/TIFF/WEBP)";
