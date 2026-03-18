@@ -26,6 +26,21 @@ export const SUPPORTED_UPLOAD_EXTENSION_SET = new Set<string>(SUPPORTED_UPLOAD_E
 
 export const SERVER_CONVERTIBLE_EXTENSIONS = SUPPORTED_UPLOAD_EXTENSIONS.filter((ext) => ext !== "pdf");
 export const SERVER_CONVERTIBLE_EXTENSION_SET = new Set<string>(SERVER_CONVERTIBLE_EXTENSIONS);
+export const PAGINATION_ORIENTATION_EXTENSIONS = [
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "odt",
+  "ods",
+  "odp",
+  "rtf",
+  "txt",
+  "csv",
+] as const;
+export const PAGINATION_ORIENTATION_EXTENSION_SET = new Set<string>(PAGINATION_ORIENTATION_EXTENSIONS);
 
 export const CONVERTIBLE_UPLOAD_ACCEPT = [
   "application/pdf",
