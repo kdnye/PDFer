@@ -53,10 +53,22 @@ export default function Home() {
   const dragFileId = useRef<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     void import("pdfjs-dist").then((pdfjsLib) => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+      if (!isMounted) {
+        return;
+      }
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
     });
 
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       pages.forEach((page) => URL.revokeObjectURL(page.thumbnailUrl));
     };
