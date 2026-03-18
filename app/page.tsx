@@ -5,7 +5,12 @@ import { PDFDocument } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
 import Image from "next/image";
 import fsiLogo from "../fsi-logo.png";
-import { CONVERTIBLE_UPLOAD_ACCEPT, SUPPORTED_UPLOAD_DESCRIPTION, SUPPORTED_UPLOAD_EXTENSION_SET } from "./lib/supported-file-types";
+import {
+  CONVERTIBLE_UPLOAD_ACCEPT,
+  PAGINATION_ORIENTATION_EXTENSION_SET,
+  SUPPORTED_UPLOAD_DESCRIPTION,
+  SUPPORTED_UPLOAD_EXTENSION_SET,
+} from "./lib/supported-file-types";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
 
@@ -32,6 +37,8 @@ type SplitRange = {
   end: number;
 };
 
+type PaginationOrientation = "auto" | "portrait" | "landscape";
+
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("merge");
@@ -41,6 +48,7 @@ export default function Home() {
   const [mergeFileName, setMergeFileName] = useState("merged.pdf");
   const [splitBaseName, setSplitBaseName] = useState("split");
   const [splitFileNames, setSplitFileNames] = useState("");
+  const [paginationOrientation, setPaginationOrientation] = useState<PaginationOrientation>("auto");
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState<"idle" | "success" | "error">("idle");
   const [working, setWorking] = useState(false);
@@ -95,7 +103,7 @@ export default function Home() {
 
     try {
       const selectedFiles = mode === "split" ? [selectableFiles[0]] : selectableFiles;
-      const pdfFiles = await Promise.all(selectedFiles.map(convertToPdfIfNeeded));
+      const pdfFiles = await Promise.all(selectedFiles.map((file) => convertToPdfIfNeeded(file, paginationOrientation)));
       const built = await Promise.all(pdfFiles.map(buildPdfState));
 
       if (mode === "split" && built[0]) {
@@ -151,6 +159,7 @@ export default function Home() {
     setMergeFileName("merged.pdf");
     setSplitBaseName("split");
     setSplitFileNames("");
+    setPaginationOrientation("auto");
     updateStatus("");
   }
 
@@ -327,6 +336,21 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="splitControls" style={{ marginTop: "1rem" }}>
+            <label htmlFor="paginationOrientation">Converted document orientation</label>
+            <select
+              id="paginationOrientation"
+              className="fsi-input"
+              value={paginationOrientation}
+              onChange={(event) => setPaginationOrientation(event.target.value as PaginationOrientation)}
+            >
+              <option value="auto">Keep source default</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+            <p className="helperText">Applied only to auto-converted Office/text files (for example Excel, Word, PowerPoint, OpenDocument, CSV, and TXT).</p>
+          </div>
+
           <div className="pdf-toolbar">
             <h2>{mode === "merge" ? "Page order" : "Source PDF"}</h2>
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -443,7 +467,7 @@ export default function Home() {
   );
 }
 
-async function convertToPdfIfNeeded(file: File): Promise<File> {
+async function convertToPdfIfNeeded(file: File, paginationOrientation: PaginationOrientation): Promise<File> {
   const extension = getFileExtension(file.name);
   if (extension === "pdf") {
     return file;
@@ -451,6 +475,8 @@ async function convertToPdfIfNeeded(file: File): Promise<File> {
 
   const formData = new FormData();
   formData.append("file", file);
+  const orientation = PAGINATION_ORIENTATION_EXTENSION_SET.has(extension) ? paginationOrientation : "auto";
+  formData.append("paginationOrientation", orientation);
 
   const response = await fetch("/api/convert-to-pdf", {
     method: "POST",
