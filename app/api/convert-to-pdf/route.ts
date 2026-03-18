@@ -147,7 +147,8 @@ async function applyPaginationOrientation(
     : Math.max(dimensions.targetWidth, dimensions.targetHeight);
 
   const originalPages = originalPdf.getPages();
-  const embeddedPages = await newPdf.embedPdf(buffer);
+  const allPageIndices = originalPages.map((_, index) => index);
+  const embeddedPages = await newPdf.embedPdf(buffer, allPageIndices);
 
   for (let i = 0; i < originalPages.length; i++) {
     const page = originalPages[i];
