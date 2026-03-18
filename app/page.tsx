@@ -2,7 +2,6 @@
 
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
-import * as pdfjsLib from "pdfjs-dist";
 import Image from "next/image";
 import fsiLogo from "../fsi-logo.png";
 import {
@@ -11,8 +10,6 @@ import {
   SUPPORTED_UPLOAD_DESCRIPTION,
   SUPPORTED_UPLOAD_EXTENSION_SET,
 } from "./lib/supported-file-types";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs`;
 
 type Mode = "merge" | "split";
 
@@ -56,6 +53,10 @@ export default function Home() {
   const dragFileId = useRef<string | null>(null);
 
   useEffect(() => {
+    void import("pdfjs-dist").then((pdfjsLib) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+    });
+
     return () => {
       pages.forEach((page) => URL.revokeObjectURL(page.thumbnailUrl));
     };
@@ -499,6 +500,7 @@ function getFileExtension(fileName: string) {
 }
 
 async function buildPdfState(file: File) {
+  const pdfjsLib = await import("pdfjs-dist");
   const bytes = await file.arrayBuffer();
   const pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
   const fileId = crypto.randomUUID();
