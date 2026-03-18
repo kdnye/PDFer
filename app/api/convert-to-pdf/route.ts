@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { NextRequest, NextResponse } from "next/server";
-import { degrees, PDFDocument } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
 import {
   PAGINATION_ORIENTATION_EXTENSION_SET,
   SERVER_CONVERTIBLE_DESCRIPTION,
@@ -95,10 +95,22 @@ async function applyPaginationOrientation(buffer: Buffer, orientation: Exclude<P
     const { width, height } = page.getSize();
     const shouldRotate = orientation === "landscape" ? width < height : width > height;
 
-    if (shouldRotate) {
-      const currentRotation = page.getRotation().angle;
-      page.setRotation(degrees((currentRotation + 90) % 360));
+    if (width === targetWidth && height === targetHeight) {
+      continue;
     }
+
+    const scale = Math.min(targetWidth / width, targetHeight / height);
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
+    const offsetX = (targetWidth - scaledWidth) / 2;
+    const offsetY = (targetHeight - scaledHeight) / 2;
+
+    page.setSize(targetWidth, targetHeight);
+    page.scaleContent(scale, scale);
+    page.translateContent(offsetX, offsetY);
+
+    page.setMediaBox(0, 0, targetWidth, targetHeight);
+    page.setCropBox(0, 0, targetWidth, targetHeight);
   }
 
   return pdfDoc.save();
