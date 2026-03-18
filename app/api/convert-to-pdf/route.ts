@@ -92,8 +92,7 @@ async function applyPaginationOrientation(buffer: Buffer, orientation: Exclude<P
   const pdfDoc = await PDFDocument.load(buffer);
 
   for (const page of pdfDoc.getPages()) {
-    const width = page.getWidth();
-    const height = page.getHeight();
+    const { width, height } = page.getSize();
     const shouldRotate = orientation === "landscape" ? width < height : width > height;
 
     if (shouldRotate) {
