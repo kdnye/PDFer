@@ -5,7 +5,8 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm install -g npm@11.11.1 --no-audit --no-fund \
+  && npm ci --no-audit --no-fund
 
 # Stage 2: build application
 FROM node:20-alpine AS builder
