@@ -136,28 +136,58 @@ async function applyPaginationOrientation(
   orientation: Exclude<PaginationOrientation, "auto">,
   dimensions: PageDimensions,
 ) {
-  const pdfDoc = await PDFDocument.load(buffer);
-  const { targetWidth, targetHeight } = dimensions;
+  const originalPdf = await PDFDocument.load(buffer);
+  const newPdf = await PDFDocument.create();
 
-  for (const page of pdfDoc.getPages()) {
+  const targetWidth = orientation === "landscape"
+    ? Math.max(dimensions.targetWidth, dimensions.targetHeight)
+    : Math.min(dimensions.targetWidth, dimensions.targetHeight);
+  const targetHeight = orientation === "landscape"
+    ? Math.min(dimensions.targetWidth, dimensions.targetHeight)
+    : Math.max(dimensions.targetWidth, dimensions.targetHeight);
+
+  const originalPages = originalPdf.getPages();
+  const embeddedPages = await newPdf.embedPdf(buffer);
+
+  for (let i = 0; i < originalPages.length; i++) {
+    const page = originalPages[i];
+    const embeddedPage = embeddedPages[i];
     const { width, height } = page.getSize();
-    if (width === targetWidth && height === targetHeight) {
+
+    const isOriginalLandscape = width > height;
+    const isTargetLandscape = targetWidth > targetHeight;
+
+    if (isOriginalLandscape === isTargetLandscape) {
+      const newPage = newPdf.addPage([targetWidth, targetHeight]);
+      const scale = Math.min(targetWidth / width, targetHeight / height);
+      const scaledWidth = width * scale;
+      const scaledHeight = height * scale;
+
+      newPage.drawPage(embeddedPage, {
+        x: (targetWidth - scaledWidth) / 2,
+        y: (targetHeight - scaledHeight) / 2,
+        width: scaledWidth,
+        height: scaledHeight,
+      });
       continue;
     }
 
-    const scale = Math.min(targetWidth / width, targetHeight / height);
-    const scaledWidth = width * scale;
+    const scale = targetWidth / width;
     const scaledHeight = height * scale;
-    const offsetX = (targetWidth - scaledWidth) / 2;
-    const offsetY = (targetHeight - scaledHeight) / 2;
+    const chunks = Math.ceil(scaledHeight / targetHeight);
 
-    page.setSize(targetWidth, targetHeight);
-    page.scaleContent(scale, scale);
-    page.translateContent(offsetX, offsetY);
+    for (let chunk = 0; chunk < chunks; chunk++) {
+      const newPage = newPdf.addPage([targetWidth, targetHeight]);
+      const yOffset = targetHeight - scaledHeight + chunk * targetHeight;
 
-    page.setMediaBox(0, 0, targetWidth, targetHeight);
-    page.setCropBox(0, 0, targetWidth, targetHeight);
+      newPage.drawPage(embeddedPage, {
+        x: 0,
+        y: yOffset,
+        width: targetWidth,
+        height: scaledHeight,
+      });
+    }
   }
 
-  return pdfDoc.save();
+  return newPdf.save();
 }
