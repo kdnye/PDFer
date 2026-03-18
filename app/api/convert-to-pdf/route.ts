@@ -12,12 +12,30 @@ import {
 } from "../../lib/supported-file-types";
 
 const execFileAsync = promisify(execFile);
+const DEFAULT_PAGE_DIMENSIONS = {
+  width: 612,
+  height: 792,
+} as const;
+
 type PaginationOrientation = "auto" | "portrait" | "landscape";
+
+type ConvertToPdfRequestBody = {
+  targetWidth?: number;
+  targetHeight?: number;
+};
+
+type PageDimensions = {
+  targetWidth: number;
+  targetHeight: number;
+};
 
 export async function POST(request: NextRequest) {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pdfer-convert-"));
 
   try {
+    const requestBody = await parseConvertToPdfRequestBody(request);
+    const { targetWidth, targetHeight } = parsePageDimensions(requestBody);
+
     const formData = await request.formData();
     const uploadedFile = formData.get("file");
     const paginationOrientation = parsePaginationOrientation(formData.get("paginationOrientation"));
@@ -48,7 +66,12 @@ export async function POST(request: NextRequest) {
     const shouldForceOrientation = paginationOrientation !== "auto" && PAGINATION_ORIENTATION_EXTENSION_SET.has(extension);
 
     if (shouldForceOrientation) {
-      pdfBuffer = Buffer.from(await applyPaginationOrientation(pdfBuffer, paginationOrientation));
+      pdfBuffer = Buffer.from(
+        await applyPaginationOrientation(pdfBuffer, paginationOrientation, {
+          targetWidth,
+          targetHeight,
+        }),
+      );
     }
 
     return new NextResponse(pdfBuffer, {
@@ -88,13 +111,36 @@ function parsePaginationOrientation(value: FormDataEntryValue | null): Paginatio
   return "auto";
 }
 
-async function applyPaginationOrientation(buffer: Buffer, orientation: Exclude<PaginationOrientation, "auto">) {
+async function parseConvertToPdfRequestBody(request: NextRequest): Promise<ConvertToPdfRequestBody> {
+  try {
+    const body = (await request.clone().json()) as ConvertToPdfRequestBody;
+    return typeof body === "object" && body !== null ? body : {};
+  } catch {
+    return {};
+  }
+}
+
+function parsePageDimensions(body: ConvertToPdfRequestBody): PageDimensions {
+  const targetWidth = Number.isFinite(body.targetWidth) && body.targetWidth! > 0
+    ? body.targetWidth!
+    : DEFAULT_PAGE_DIMENSIONS.width;
+  const targetHeight = Number.isFinite(body.targetHeight) && body.targetHeight! > 0
+    ? body.targetHeight!
+    : DEFAULT_PAGE_DIMENSIONS.height;
+
+  return { targetWidth, targetHeight };
+}
+
+async function applyPaginationOrientation(
+  buffer: Buffer,
+  orientation: Exclude<PaginationOrientation, "auto">,
+  dimensions: PageDimensions,
+) {
   const pdfDoc = await PDFDocument.load(buffer);
+  const { targetWidth, targetHeight } = dimensions;
 
   for (const page of pdfDoc.getPages()) {
     const { width, height } = page.getSize();
-    const shouldRotate = orientation === "landscape" ? width < height : width > height;
-
     if (width === targetWidth && height === targetHeight) {
       continue;
     }
